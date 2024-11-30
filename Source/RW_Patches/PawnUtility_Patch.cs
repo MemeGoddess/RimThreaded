@@ -14,7 +14,7 @@ namespace RimThreaded.RW_Patches
         {
             Type original = typeof(PawnUtility);
             Type patched = typeof(PawnUtility_Patch);
-            RimThreadedHarmony.Prefix(original, patched, nameof(IsInvisible));
+            RimThreadedHarmony.Prefix(typeof(InvisibilityUtility), patched, nameof(IsInvisible));
             RimThreadedHarmony.Prefix(original, patched, nameof(PawnBlockingPathAt));
         }
 
@@ -92,6 +92,7 @@ namespace RimThreaded.RW_Patches
             return false;
         }
 
+        // TODO LA Check this method works as intended. From the looks of it, it caches Invisibility and then never invalidates it
         public static bool IsInvisible(ref bool __result, Pawn pawn)
         {
             if (!isPawnInvisible.TryGetValue(pawn, out bool isInvisible))
@@ -118,7 +119,8 @@ namespace RimThreaded.RW_Patches
             List<Hediff> hediffs = pawn.health.hediffSet.hediffs;
             for (int i = 0; i < hediffs.Count; i++)
             {
-                if (hediffs[i].TryGetComp<HediffComp_Invisibility>() != null)
+                var comp = hediffs[i].TryGetComp<HediffComp_Invisibility>();
+                if (comp != null && !comp.Props.visibleToPlayer && !comp.PsychologicallyVisible)
                 {
                     isInvisible = true;
                     break;

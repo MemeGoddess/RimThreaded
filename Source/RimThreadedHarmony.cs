@@ -1,6 +1,7 @@
 ﻿using HarmonyLib;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using Verse;
@@ -143,8 +144,7 @@ namespace RimThreaded
 						  select a).ToList();
 			//string replacementsJsonPath = Path.Combine(((Mod)RimThreadedMod).intContent.RootDir, "replacements.json"); 
 
-			string jsonString = File.ReadAllText(RimThreadedMod.replacementsJsonPath);
-			replacements = JsonConvert.DeserializeObject<Replacements>(jsonString);
+            replacements = HarmonyReplacements.GetReplacements();
 
 			//IEnumerable<Assembly> source = from a in AppDomain.CurrentDomain.GetAssemblies()
 			//                               where !a.FullName.StartsWith("Microsoft.VisualStudio")
@@ -702,8 +702,24 @@ namespace RimThreaded
 				}
 				Log.Message("RimThreaded is done TranspilingFieldReplacements for method: " + original.DeclaringType.FullName + "." + original.Name);
 			}
-			harmony.Patch(original, transpiler: replaceFieldsHarmonyTranspiler);
-		}
+
+            
+
+            try
+            {
+                if (original.DeclaringType.IsGenericType && original.DeclaringType.ContainsGenericParameters)
+                {
+                    return;
+                    original = original.DeclaringType.GetMethod(original.Name, BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.SetField | BindingFlags.GetProperty | BindingFlags.SetProperty);
+                }
+                harmony.Patch(original, transpiler: replaceFieldsHarmonyTranspiler);
+            }
+            catch(Exception ex)
+            {
+				Debugger.Break();
+                throw;
+            }
+        }
 
 		public static void TranspileLockAdd3(Type original, string methodName, Type[] origType = null)
 		{
@@ -850,7 +866,8 @@ namespace RimThreaded
 			
 			GenGrid_Patch.RunNonDestructivePatches(); //explosion fix
 			ThinkNode_JoinVoluntarilyJoinableLord_Patch.RunDestructivePatches(); //explosion fix
-			Corpse_Patch.RunNonDestructivePatches(); // 1.3 explosion fix
+            
+			//Corpse_Patch.RunNonDestructivePatches(); // 1.3 explosion fix. 1.5 Doesn't appear to be needed anymore
 			TransportShipManager_Patch.RunNonDestructivePatches();
 			//RestUtility_Patch.RunNonDestructivePatches(); // 1.3 explosion fix - not sure why this causes bug with sleeping
 			GrammarResolver_Patch.RunNonDestructivePatches(); //TODO 1.4 reexamine
@@ -908,7 +925,7 @@ namespace RimThreaded
 			Building_PlantGrower_Patch.RunNonDestructivePatches();
 			CompCauseGameCondition_Patch.RunDestructivePatches(); //TODO - ThreadSafeLinkedList
 			CompSpawnSubplant_Transpile.RunDestructivePatches(); //could use interlock instead
-			Corpse_Patch.RunDestructivePatches(); // 1.3 explosion fix
+			//Corpse_Patch.RunDestructivePatches(); // 1.3 explosion fix. 1.5 Doesn't appear to be needed anymore
 			DateNotifier_Patch.RunDestructivePatches(); //performance boost when playing on only 1 map
 			DesignationManager_Patch.RunDestructivePatches(); //added for development build
 			District_Patch.RunDestructivePatches(); // 1.3 fix for cachedOpenRoofState null ref - TODO - optimize locks

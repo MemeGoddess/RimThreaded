@@ -95,11 +95,6 @@
       <Private>false</Private>
     </Reference>
   </ItemGroup>
-  <ItemGroup>
-    <None Update="replacements_1.5.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
   	<ItemGroup>
   	  <Reference Update="mscorlib">
   	    <Private>false</Private>
