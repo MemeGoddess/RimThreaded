@@ -1,4 +1,5 @@
 ﻿using System;
+using RimWorld;
 using Verse;
 
 namespace RimThreaded.RW_Patches
@@ -19,7 +20,7 @@ namespace RimThreaded.RW_Patches
             if (__instance.roofGrid[mcc] != def)
             {
                 __instance.roofGrid[mcc] = def;
-                map.glowGrid.MarkGlowGridDirty(c);
+                map.glowGrid.DirtyCache(c);
                 //Comment the 3 following lines and uncomment the 4th to fix the roof notification -Sernior
                 Room room = map.regionGrid.GetValidRegionAt_NoRebuild(c)?.Room;
                 if (room != null)
@@ -30,7 +31,7 @@ namespace RimThreaded.RW_Patches
                     __instance.drawerInt.SetDirty();
                 }
 
-                map.mapDrawer.MapMeshDirty(c, MapMeshFlag.Roofs);
+                map.mapDrawer.MapMeshDirty(c, MapMeshFlagDefOf.Roofs);
             }
             return false;
         }

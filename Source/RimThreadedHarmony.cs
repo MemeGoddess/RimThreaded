@@ -114,20 +114,20 @@ namespace RimThreaded
 		}
 #pragma warning disable 649
 		[Serializable]
-		class Replacements
+        public class Replacements
 		{
 			public List<ClassReplacement> ClassReplacements;
 		}
 
 		[Serializable]
-		class ClassReplacement
+        public class ClassReplacement
 		{
 			public string ClassName;
 			public bool IgnoreMissing;
 			public List<ThreadStaticDetail> ThreadStatics;
 		}
 		[Serializable]
-		class ThreadStaticDetail
+        public class ThreadStaticDetail
 		{
 			public string FieldName;
 			public string PatchedClassName;
@@ -135,7 +135,7 @@ namespace RimThreaded
 		}
 #pragma warning restore 649
 
-		static Replacements replacements;
+        public static Replacements replacements;
 		private static void LoadFieldReplacements()
 		{
 			assemblies = (from a in AppDomain.CurrentDomain.GetAssemblies()

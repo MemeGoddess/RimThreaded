@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Verse;
 
 namespace RimThreaded.RW_Patches
@@ -36,7 +37,8 @@ namespace RimThreaded.RW_Patches
             {
                 HashSet<Thing> newDrawThings = new HashSet<Thing>(__instance.drawThings);
                 newDrawThings.Remove(t);
-                __instance.drawThings = newDrawThings;
+                __instance.drawThings.Clear();
+                __instance.drawThings.AddRange(newDrawThings);
             }
             return false;
         }

@@ -45,10 +45,11 @@ namespace RimThreaded.RW_Patches
         {
             lock (lockObject)
             {
-                ResourceCounter.resources = new List<ThingDef>(from def in DefDatabase<ThingDef>.AllDefs
-                                                                where def.CountAsResource
-                                                                orderby def.resourceReadoutPriority descending
-                                                                select def);
+                ResourceCounter.resources.Clear();
+                ResourceCounter.resources.AddRange(from def in DefDatabase<ThingDef>.AllDefs
+                    where def.CountAsResource
+                    orderby def.resourceReadoutPriority descending
+                    select def);
             }
             return false;
         }
@@ -63,7 +64,8 @@ namespace RimThreaded.RW_Patches
                 {
                     newCountedAmounts.Add(tempResources[i], 0);
                 }
-                __instance.countedAmounts = newCountedAmounts;
+                __instance.countedAmounts.Clear();
+                __instance.countedAmounts.AddRange(newCountedAmounts);
             }
 
             return false;
@@ -88,7 +90,8 @@ namespace RimThreaded.RW_Patches
                 Dictionary<ThingDef, int> newCountedAmounts = new Dictionary<ThingDef, int>(__instance.AllCountedAmounts);
                 Log.Error("Looked for nonexistent key " + rDef + " in counted resources.");
                 newCountedAmounts.Add(rDef, 0);
-                __instance.countedAmounts = newCountedAmounts;
+                __instance.countedAmounts.Clear();
+                __instance.countedAmounts.AddRange(newCountedAmounts);
             }
             __result = 0;
             return false;
@@ -115,7 +118,9 @@ namespace RimThreaded.RW_Patches
                 }
                 if (changed)
                 {
-                    __instance.countedAmounts = newCountedAmounts;
+                    __instance.countedAmounts.Clear();
+                    __instance.countedAmounts.AddRange(newCountedAmounts);
+
                 }
             }
             return false;

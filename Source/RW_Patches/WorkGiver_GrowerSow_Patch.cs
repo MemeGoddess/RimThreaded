@@ -75,7 +75,7 @@ namespace RimThreaded.RW_Patches
                     return false;
                 }
 
-                if (map.glowGrid.GameGlowAt(c, ignoreCavePlants: true) > 0f)
+                if (map.glowGrid.GroundGlowAt(c, ignoreCavePlants: true) > 0f)
                 {
                     JobFailReason.Is(WorkGiver_GrowerSow.CantSowCavePlantBecauseOfLightTrans);
                     __result = null;

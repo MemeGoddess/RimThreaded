@@ -34,7 +34,7 @@ namespace RimThreaded.RW_Patches
                 __result = false;
                 return false;
             }
-            string path = apparel.def.apparel.LastLayer != ApparelLayerDefOf.Overhead && apparel.def.apparel.LastLayer != ApparelLayerDefOf.EyeCover && !PawnRenderer.RenderAsPack(apparel) && !(apparel.WornGraphicPath == BaseContent.PlaceholderImagePath) && !(apparel.WornGraphicPath == BaseContent.PlaceholderGearImagePath) ? apparel.WornGraphicPath + "_" + bodyType.defName : apparel.WornGraphicPath;
+            string path = apparel.def.apparel.LastLayer != ApparelLayerDefOf.Overhead && apparel.def.apparel.LastLayer != ApparelLayerDefOf.EyeCover && !apparel.RenderAsPack() && !(apparel.WornGraphicPath == BaseContent.PlaceholderImagePath) && !(apparel.WornGraphicPath == BaseContent.PlaceholderGearImagePath) ? apparel.WornGraphicPath + "_" + bodyType.defName : apparel.WornGraphicPath;
             Shader shader = ShaderDatabase.Cutout;
             if (apparel.def.apparel.useWornGraphicMask)
             {

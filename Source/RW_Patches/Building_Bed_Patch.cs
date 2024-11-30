@@ -82,7 +82,7 @@ namespace RimThreaded.RW_Patches
             if (__instance.def.CanAffectLinker)
             {
                 map.linkGrid.Notify_LinkerCreatedOrDestroyed(__instance);
-                map.mapDrawer.MapMeshDirty(__instance.Position, MapMeshFlag.Things, regenAdjacentCells: true, regenAdjacentSections: false);
+                map.mapDrawer.MapMeshDirty(__instance.Position, MapMeshFlagDefOf.Things, regenAdjacentCells: true, regenAdjacentSections: false);
             }
             if (!__instance.def.CanOverlapZones)
             {
@@ -165,7 +165,7 @@ namespace RimThreaded.RW_Patches
             Basemap.listerBuildings.Add(__instance);
             if (__instance.def.coversFloor)
             {
-                Basemap.mapDrawer.MapMeshDirty(ThingPos(__instance), MapMeshFlag.Terrain, regenAdjacentCells: true, regenAdjacentSections: false);
+                Basemap.mapDrawer.MapMeshDirty(ThingPos(__instance), MapMeshFlagDefOf.Terrain, regenAdjacentCells: true, regenAdjacentSections: false);
             }
             CellRect cellRect = __instance.OccupiedRect();
             for (int i = cellRect.minZ; i <= cellRect.maxZ; i++)
@@ -173,8 +173,8 @@ namespace RimThreaded.RW_Patches
                 for (int j = cellRect.minX; j <= cellRect.maxX; j++)
                 {
                     IntVec3 intVec = new IntVec3(j, 0, i);
-                    Basemap.mapDrawer.MapMeshDirty(intVec, MapMeshFlag.Buildings);
-                    Basemap.glowGrid.MarkGlowGridDirty(intVec);
+                    Basemap.mapDrawer.MapMeshDirty(intVec, MapMeshFlagDefOf.Buildings);
+                    Basemap.glowGrid.DirtyCache(intVec);
                     if (!SnowGrid.CanCoexistWithSnow(__instance.def))
                     {
                         Basemap.snowGrid.SetDepth(intVec, 0f);

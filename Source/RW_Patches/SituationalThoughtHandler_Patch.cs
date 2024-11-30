@@ -20,7 +20,6 @@ namespace RimThreaded.RW_Patches
             RimThreadedHarmony.Prefix(original, patched, nameof(Notify_SituationalThoughtsDirty));
             RimThreadedHarmony.Prefix(original, patched, nameof(RemoveExpiredThoughtsFromCache));
             RimThreadedHarmony.Prefix(original, patched, nameof(CheckRecalculateSocialThoughts));
-            RimThreadedHarmony.Prefix(original, patched, nameof(CheckRecalculateMoodThoughts));
         }
 
         internal static void InitializeThreadStatics()
@@ -42,42 +41,6 @@ namespace RimThreaded.RW_Patches
             return false;
         }
 
-        public static bool CheckRecalculateMoodThoughts(SituationalThoughtHandler __instance)
-        {
-            int ticksGame = Find.TickManager.TicksGame;
-            if (ticksGame - __instance.lastMoodThoughtsRecalculationTick < 100)
-                return false;
-            __instance.lastMoodThoughtsRecalculationTick = ticksGame;
-            try
-            {
-                tmpCachedThoughts.Clear();
-                for (int index = 0; index < __instance.cachedThoughts.Count; ++index)
-                {
-                    __instance.cachedThoughts[index].RecalculateState();
-                    tmpCachedThoughts.Add(__instance.cachedThoughts[index].def);
-                }
-                List<ThoughtDef> socialThoughtDefs = ThoughtUtility.situationalNonSocialThoughtDefs;
-                int index1 = 0;
-                for (int count = socialThoughtDefs.Count; index1 < count; ++index1)
-                {
-                    if (!tmpCachedThoughts.Contains(socialThoughtDefs[index1]))
-                    {
-                        Thought_Situational thought = __instance.TryCreateThought(socialThoughtDefs[index1]);
-                        if (thought != null)
-                        {
-                            lock (__instance.cachedThoughts)
-                            {
-                                __instance.cachedThoughts.Add(thought);
-                            }
-                        }
-                    }
-                }
-            }
-            finally
-            {
-            }
-            return false;
-        }
         public static bool CheckRecalculateSocialThoughts(SituationalThoughtHandler __instance, Pawn otherPawn)
         {
             try
@@ -122,7 +85,7 @@ namespace RimThreaded.RW_Patches
                 }
                 //lock (__instance.cachedSocialThoughts)
                 //{
-                __instance.cachedSocialThoughts[otherPawn].activeThoughts = new List<Thought_SituationalSocial>();
+                __instance.cachedSocialThoughts[otherPawn].activeThoughts.Clear();
                 //}
                 for (int index2 = 0; index2 < cachedSocialThoughts.thoughts.Count; ++index2)
                 {
@@ -136,6 +99,10 @@ namespace RimThreaded.RW_Patches
                     }
                 }
             }
+            catch (Exception ex)
+            {
+                Log.Error($"Exception when recalculating social thoughts for pawn {(object)__instance.pawn}: {(object)ex}");
+            }
             finally
             {
             }
@@ -146,10 +113,11 @@ namespace RimThreaded.RW_Patches
         {
             lock (__instance)
             {
-                __instance.cachedThoughts = new List<Thought_Situational>();
-                __instance.cachedSocialThoughts = new Dictionary<Pawn, CachedSocialThoughts>();
+                __instance.cachedThoughts.Clear();
+                __instance.cachedSocialThoughts.Clear();
             }
-            __instance.lastMoodThoughtsRecalculationTick = -99999;
+
+            __instance.thoughtsDirty = true;
             return false;
         }
 
@@ -159,7 +127,8 @@ namespace RimThreaded.RW_Patches
             {
                 Dictionary<Pawn, CachedSocialThoughts> newCachedSocialThoughts = new Dictionary<Pawn, CachedSocialThoughts>(__instance.cachedSocialThoughts);
                 RemoveAll(newCachedSocialThoughts, x => x.Value.Expired || x.Key.Discarded);
-                __instance.cachedSocialThoughts = newCachedSocialThoughts;
+                __instance.cachedSocialThoughts.Clear();
+                __instance.cachedSocialThoughts.AddRange(newCachedSocialThoughts);
             }
             return false;
         }
