@@ -20,16 +20,16 @@ namespace RimThreaded.RW_Patches
         {
             Type original = typeof(TileTemperaturesComp);
             Type patched = typeof(TileTemperaturesComp_Patch);
-            RimThreadedHarmony.Prefix(original, patched, "WorldComponentTick");
-            RimThreadedHarmony.Prefix(original, patched, "ClearCaches");
-            RimThreadedHarmony.Prefix(original, patched, "GetOutdoorTemp");
-            RimThreadedHarmony.Prefix(original, patched, "GetSeasonalTemp");
-            RimThreadedHarmony.Prefix(original, patched, "OutdoorTemperatureAt");
-            RimThreadedHarmony.Prefix(original, patched, "OffsetFromDailyRandomVariation");
-            RimThreadedHarmony.Prefix(original, patched, "AverageTemperatureForTwelfth");
-            RimThreadedHarmony.Prefix(original, patched, "SeasonAcceptableFor");
-            RimThreadedHarmony.Prefix(original, patched, "OutdoorTemperatureAcceptableFor");
-            RimThreadedHarmony.Prefix(original, patched, "SeasonAndOutdoorTemperatureAcceptableFor");
+            RimThreadedHarmony.Prefix(original, patched, nameof(TileTemperaturesComp.WorldComponentTick));
+            RimThreadedHarmony.Prefix(original, patched, nameof(TileTemperaturesComp.ClearCaches));
+            RimThreadedHarmony.Prefix(original, patched, nameof(TileTemperaturesComp.GetOutdoorTemp));
+            RimThreadedHarmony.Prefix(original, patched, nameof(TileTemperaturesComp.GetSeasonalTemp));
+            RimThreadedHarmony.Prefix(original, patched, nameof(TileTemperaturesComp.OutdoorTemperatureAt));
+            RimThreadedHarmony.Prefix(original, patched, nameof(TileTemperaturesComp.OffsetFromDailyRandomVariation));
+            RimThreadedHarmony.Prefix(original, patched, nameof(TileTemperaturesComp.AverageTemperatureForTwelfth));
+            RimThreadedHarmony.Prefix(original, patched, nameof(TileTemperaturesComp.SeasonAcceptableFor));
+            RimThreadedHarmony.Prefix(original, patched, nameof(TileTemperaturesComp.OutdoorTemperatureAcceptableFor));
+            RimThreadedHarmony.Prefix(original, patched, nameof(TileTemperaturesComp.SeasonAndOutdoorTemperatureAcceptableFor));
         }
 
         public static bool WorldComponentTick(TileTemperaturesComp __instance)

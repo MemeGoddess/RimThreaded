@@ -879,10 +879,9 @@ namespace RimThreaded
 
             Postfix(typeof(SlotGroup), typeof(HaulingCache), nameof(HaulingCache.Notify_AddedCell)); //recheck growing zone when upon stockpile zone grid add
 			Postfix(typeof(ListerHaulables), typeof(HaulingCache), nameof(HaulingCache.Notify_SlotGroupChanged)); //recheck growing zone when upon other actions
-			
-		}
+        }
 
-		private static void PatchDestructiveFixes()
+        private static void PatchDestructiveFixes()
 		{
 			//---REQUIRED---
 			TickManager_Patch.RunDestructivePatches(); //Redirects DoSingleTick to RimThreaded
@@ -905,6 +904,7 @@ namespace RimThreaded
 			SectionLayer_Patch.RunDestructivePatches();
 			Texture2D_Patch.RunDestructivePatches();//Graphics (Giddy-Up)
 			Text_Patch.RunDestructivePatches(); //unity get_CurFontStyle on main thread
+
 
 			//---Multithreaded Ticking---
 			FactionManager_Patch.RunDestructivePatches(); //allows multithreaded ticking of factions
@@ -996,6 +996,8 @@ namespace RimThreaded
             RecordWorker_TimeGettingJoy_Patch.RunDestructivePatches();
 			RegionAndRoomUpdater_Patch.RunDestructivePatches();
 			RegionDirtyer_Patch.RunDestructivePatches();
+
+            //return;
 			
 			RegionGrid_Patch.RunDestructivePatches();
 			RegionLink_Patch.RunDestructivePatches();
@@ -1013,31 +1015,33 @@ namespace RimThreaded
 			Thing_Patch.RunDestructivePatches(); //Thing_Patch.TakeDamage is a good candidate for transpile
 			ThinkNode_SubtreesByTag_Patch.RunDestructivePatches();
 			ThinkNode_ForbidOutsideFlagRadius_Patch.RunDestructivePatches(); //base method override is double destructive 
-
+			// Fixed below this point
 			TileTemperaturesComp_Patch.RunDestructivePatches(); //TODO - good simple transpile candidate
 			UniqueIDsManager_Patch.RunDestructivePatches(); // Simple use of Interlocked.Increment
 			Verb_Patch.RunDestructivePatches(); // TODO: why is this causing null?
 			WealthWatcher_Patch.RunDestructivePatches();
 			//WorkGiver_GrowerSow_Patch.RunDestructivePatches();
-			
-			
+
+            //return; // Runs at the very least, however nothing happens
 
 			//complex methods that need further review for simplification
 			AttackTargetReservationManager_Patch.RunDestructivePatches();
 			BiomeDef_Patch.RunDestructivePatches();
 			FloodFiller_Patch.RunDestructivePatches();//FloodFiller - inefficient global lock - threadstatics might help do these concurrently?
-			JobQueue_Patch.RunDestructivePatches();
+
+            JobQueue_Patch.RunDestructivePatches();
 			MapPawns_Patch.RunDestructivePatches(); //TODO: Affects Animal Master Assignment
 			MeditationFocusTypeAvailabilityCache_Patch.RunDestructivePatches();
+
 			Pawn_JobTracker_Patch.RunDestructivePatches();
-			Pawn_Patch.RunDestructivePatches(); // 1) causes strange crash to desktop without error log. 2) not efficient base replacement for PostApplyDamage 
+            //Pawn_Patch.RunDestructivePatches(); // 1) causes strange crash to desktop without error log. 2) not efficient base replacement for PostApplyDamage 
 			Region_Patch.RunDestructivePatches();
 			ReservationManager_Patch.RunDestructivePatches();
 			Room_Patch.RunDestructivePatches();
-			SituationalThoughtHandler_Patch.RunDestructivePatches(); //TODO replace cachedThoughts with ThreadSafeLinkedList
-			ThingOwnerUtility_Patch.RunDestructivePatches(); //TODO fix method reference by index
-			
-			
+			//SituationalThoughtHandler_Patch.RunDestructivePatches(); //TODO replace cachedThoughts with ThreadSafeLinkedList
+			//ThingOwnerUtility_Patch.RunDestructivePatches(); //TODO fix method reference by index
+
+            //return;
 															 //-----SOUND-----
 			SampleSustainer_Patch.RunDestructivePatches(); // TryMakeAndPlay works better than set_cutoffFrequency, which seems buggy for echo pass filters
 			SoundSizeAggregator_Patch.RunDestructivePatches();

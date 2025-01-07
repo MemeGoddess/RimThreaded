@@ -33,7 +33,7 @@ namespace RimThreaded.RW_Patches
                     {
                         return false;
                     }
-                    __result = __instance.GetValue(StatRequest.For(thing));
+                    __result = __instance.GetValue(StatRequest.For(thing), applyPostProcess);
                     immutableStatCache[thing] = __result;
                     return false;
                 }

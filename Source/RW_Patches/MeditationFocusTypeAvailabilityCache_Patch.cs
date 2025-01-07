@@ -13,8 +13,8 @@ namespace RimThreaded.RW_Patches
         {
             Type original = typeof(MeditationFocusTypeAvailabilityCache);
             Type patched = typeof(MeditationFocusTypeAvailabilityCache_Patch);
-            RimThreadedHarmony.Prefix(original, patched, "PawnCanUse");
-            RimThreadedHarmony.Prefix(original, patched, "ClearFor");
+            RimThreadedHarmony.Prefix(original, patched, nameof(PawnCanUse));
+            RimThreadedHarmony.Prefix(original, patched, nameof(ClearFor));
         }
         public static bool PawnCanUse(ref bool __result, Pawn p, MeditationFocusDef type)
         {

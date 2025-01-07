@@ -15,7 +15,7 @@ namespace RimThreaded.RW_Patches
 
         public static void RunDestructivePatches()
         {
-            RimThreadedHarmony.Prefix(original, patched, "ResetStaticData");
+            RimThreadedHarmony.Prefix(original, patched, nameof(WealthWatcher.ResetStaticData));
         }
 
         public static bool ResetStaticData(WealthWatcher __instance)

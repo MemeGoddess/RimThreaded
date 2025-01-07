@@ -23,11 +23,11 @@ namespace RimThreaded.RW_Patches
             RimThreadedHarmony.Prefix(original, patched, "TryMakeAndPlay");
         }
 
-        public static bool TryMakeAndPlay(ref SampleSustainer __result, SubSustainer subSus, AudioClip clip, float scheduledEndTime)
+        public static bool TryMakeAndPlay(ref SampleSustainer __result, SubSustainer subSus, AudioClip clip, float scheduledEndTime, float startTime = 0.0f)
         {
             if (!CurrentThread.IsBackground || !allWorkerThreads.TryGetValue(CurrentThread, out ThreadInfo threadInfo))
                 return true;
-            threadInfo.safeFunctionRequest = new object[] { safeFunction, new object[] { subSus, clip, scheduledEndTime } };
+            threadInfo.safeFunctionRequest = new object[] { safeFunction, new object[] { subSus, clip, scheduledEndTime, startTime } };
             mainThreadWaitHandle.Set();
             threadInfo.eventWaitStart.WaitOne();
             __result = (SampleSustainer)threadInfo.safeFunctionResult;

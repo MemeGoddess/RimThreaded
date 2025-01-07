@@ -84,7 +84,7 @@ namespace RimThreaded.RW_Patches
                 }
                 if (repeatMode == RepeatSelectMode.NeverLastHalf)
                 {
-                    if (!recentlyPlayedResolvedGrains.Where((ResolvedGrain g) => g.Equals(chosenGrain)).Any())
+                    if (!recentlyPlayedResolvedGrains.Any(g => g.Equals(chosenGrain)))
                     {
                         break;
                     }

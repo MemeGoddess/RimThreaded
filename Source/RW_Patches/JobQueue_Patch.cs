@@ -13,12 +13,12 @@ namespace RimThreaded.RW_Patches
         {
             Type original = typeof(JobQueue);
             Type patched = typeof(JobQueue_Patch);
-            RimThreadedHarmony.Prefix(original, patched, "AnyCanBeginNow");
-            RimThreadedHarmony.Prefix(original, patched, "EnqueueFirst");
-            RimThreadedHarmony.Prefix(original, patched, "EnqueueLast");
-            RimThreadedHarmony.Prefix(original, patched, "Contains");
-            RimThreadedHarmony.Prefix(original, patched, "Extract");
-            RimThreadedHarmony.Prefix(original, patched, "Dequeue");
+            RimThreadedHarmony.Prefix(original, patched, nameof(JobQueue.AnyCanBeginNow));
+            RimThreadedHarmony.Prefix(original, patched, nameof(JobQueue.EnqueueFirst));
+            RimThreadedHarmony.Prefix(original, patched, nameof(JobQueue.EnqueueLast));
+            RimThreadedHarmony.Prefix(original, patched, nameof(JobQueue.Contains));
+            RimThreadedHarmony.Prefix(original, patched, nameof(JobQueue.Extract));
+            RimThreadedHarmony.Prefix(original, patched, nameof(JobQueue.Dequeue));
         }
         public static bool AnyCanBeginNow(JobQueue __instance, ref bool __result, Pawn pawn, bool whileLyingDown)
         {

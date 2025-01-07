@@ -11,7 +11,7 @@ namespace RimThreaded.RW_Patches
 
         internal static void RunDestructivePatches()
         {
-            RimThreadedHarmony.Prefix(original, patched, "get_DirectOwner");
+            RimThreadedHarmony.Prefix(original, patched, nameof(get_DirectOwner));
         }
 
         public static bool get_DirectOwner(Verb __instance, ref IVerbOwner __result)

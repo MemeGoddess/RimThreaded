@@ -14,7 +14,7 @@ namespace RimThreaded.RW_Patches
             Type patched = typeof(BeautyUtility_Patch);
             RimThreadedHarmony.Prefix(original, patched, nameof(CellBeauty));
         }
-        public static bool CellBeauty(ref float __result, IntVec3 c, Map map, List<Thing> countedThings = null)
+        public static bool CellBeauty(ref float __result, IntVec3 c, Map map, HashSet<Thing> countedThings = null)
         {
             float num = 0.0f;
             float num2 = 0.0f;
@@ -37,7 +37,8 @@ namespace RimThreaded.RW_Patches
                 __result = 0f;
                 return false;
             }
-            bool flag2 = c.GetRoom(map)?.PsychologicallyOutdoors ?? true;
+            bool outside = c.GetRoom(map)?.PsychologicallyOutdoors ?? true;
+            bool roofed = map.roofGrid.Roofed(c);
             List<Thing> thingList = thingGrid.ThingsListAt(c); //changed
             for (int index = 0; index < thingList.Count; ++index)
             {
@@ -52,19 +53,20 @@ namespace RimThreaded.RW_Patches
                 SlotGroup slotGroup = thing.GetSlotGroup();
                 if (slotGroup != null && slotGroup.parent != thing && slotGroup.parent.IgnoreStoredThingsBeauty)
                     continue;
-                float num3 = ((flag2 && thing.def.StatBaseDefined(StatDefOf.BeautyOutdoors)) ? thing.GetStatValue(StatDefOf.BeautyOutdoors) : thing.GetStatValue(StatDefOf.Beauty));
-                if (thing is Filth && !map.roofGrid.Roofed(c))
+                //float beauty = ((outside && thing.def.StatBaseDefined(StatDefOf.BeautyOutdoors)) ? thing.GetStatValue(StatDefOf.BeautyOutdoors) : thing.GetStatValue(StatDefOf.Beauty));
+                float beauty = thing.GetBeauty(outside);
+                if (thing.def.filth != null && !roofed)
                 {
-                    num3 *= 0.3f;
+                    beauty *= 0.3f;
                 }
                 if (thing.def.Fillage == FillCategory.Full)
                 {
                     flag = true;
-                    num2 += num3;
+                    num2 += beauty;
                 }
                 else
                 {
-                    num += num3;
+                    num += beauty;
                 }              
             }
             if (flag)
@@ -76,7 +78,7 @@ namespace RimThreaded.RW_Patches
             {
                 num += -1f;
             }
-            if (flag2 && terrainDef.StatBaseDefined(StatDefOf.BeautyOutdoors))
+            if (outside && terrainDef.StatBaseDefined(StatDefOf.BeautyOutdoors))
             {
                 __result = num + terrainDef.GetStatValueAbstract(StatDefOf.BeautyOutdoors);
                 return false;

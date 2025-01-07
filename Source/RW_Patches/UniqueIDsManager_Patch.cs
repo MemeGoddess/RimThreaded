@@ -12,7 +12,7 @@ namespace RimThreaded.RW_Patches
         {
             Type original = typeof(UniqueIDsManager);
             Type patched = typeof(UniqueIDsManager_Patch);
-            RimThreadedHarmony.Prefix(original, patched, nameof(GetNextID));
+            RimThreadedHarmony.Prefix(original, patched, nameof(UniqueIDsManager.GetNextID));
         }
         public static bool GetNextID(ref int __result, ref int nextID)
         {

@@ -32,7 +32,7 @@ namespace RimThreaded.RW_Patches
             RimThreadedHarmony.Prefix(original, patched, nameof(ReleaseClaimedBy));
             RimThreadedHarmony.Prefix(original, patched, nameof(ReleaseAllClaimedBy));
             RimThreadedHarmony.Prefix(original, patched, nameof(FirstReservationFor));
-            RimThreadedHarmony.Prefix(original, patched, nameof(IsReservedByAnyoneOf));
+            RimThreadedHarmony.Prefix(original, patched, nameof(TryGetReserver));
             RimThreadedHarmony.Prefix(original, patched, nameof(FirstRespectedReserver));
             RimThreadedHarmony.Prefix(original, patched, nameof(ReservedBy), new Type[] { typeof(LocalTargetInfo), typeof(Pawn), typeof(Job) });
             //RimThreadedHarmony.Prefix(original, patched, "ReservedByJobDriver_TakeToBed"); //TODO FIX!
@@ -430,6 +430,32 @@ namespace RimThreaded.RW_Patches
                     __result = false;
                     return false;
                 }
+
+                if (target.HasThing && target.Thing is Building thing && thing.def.hasInteractionCell)
+                {
+                    IntVec3 interactionCell = thing.InteractionCell;
+                    Building edifice = interactionCell.GetEdifice(claimant.Map);
+                    if (edifice != null)
+                    {
+                        Pawn reserver;
+                        if (claimant.Map.reservationManager.TryGetReserver((LocalTargetInfo)(Thing)edifice,
+                                claimant.Faction, out reserver) && reserver.Spawned && reserver != claimant)
+                        {
+                            __result = false;
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        Pawn reserver;
+                        if (claimant.Map.reservationManager.TryGetReserver((LocalTargetInfo)interactionCell, claimant.Faction, out reserver) && reserver.Spawned && reserver != claimant)
+                        {
+                            __result = false;
+                            return false;
+                        }
+                    }
+                }
+
                 int num3 = 0;
                 int num4 = 0;
                 List<Reservation> reservationTargetList = getReservationTargetList(__instance, target);
@@ -589,7 +615,9 @@ namespace RimThreaded.RW_Patches
           int maxPawns = 1,
           int stackCount = -1,
           ReservationLayerDef layer = null,
-          bool errorOnFailed = true)
+          bool errorOnFailed = true,
+          bool ignoreOtherReservations = false,
+          bool canReserversStartJobs = true)
         {
             lock (__instance)
             {
@@ -626,7 +654,7 @@ namespace RimThreaded.RW_Patches
                     __result = false;
                     return false;
                 }
-                bool canReserveResult = __instance.CanReserve(claimant, target, maxPawns, stackCount, layer);
+                bool canReserveResult = __instance.CanReserve(claimant, target, maxPawns, stackCount, layer, ignoreOtherReservations);
                 Reservation reservation;
                 Dictionary<LocalTargetInfo, List<Reservation>> reservationTargetDict;
                 Dictionary<Pawn, List<Reservation>> reservationClaimantDict;
@@ -663,7 +691,25 @@ namespace RimThreaded.RW_Patches
                         foreach (Reservation reservation2 in claimantReservations)
                         {
                             if (reservation2.Claimant != claimant && reservation2.Layer == layer && RespectsReservationsOf(claimant, reservation2.Claimant))
-                                reservation2.Claimant.jobs.EndCurrentOrQueuedJob(reservation2.Job, JobCondition.InterruptForced);
+                            {
+                                // TODO Double check this code, as it wasn't checking target before
+                                if(reservation2.Target == target)
+                                    reservation2.Claimant.jobs.EndCurrentOrQueuedJob(reservation2.Job,
+                                    JobCondition.InterruptForced, canReserversStartJobs);
+                                else if (target.HasThing && target.Thing is Building buildingThing &&
+                                         buildingThing.def.hasInteractionCell)
+                                {
+                                    IntVec3 interactionCell = thing.InteractionCell;
+                                    Building edifice = interactionCell.GetEdifice(claimant.Map);
+                                    if (reservation.Claimant != claimant && reservation.Layer == layer && ReservationManager.RespectsReservationsOf(claimant, reservation.Claimant))
+                                    {
+                                        if (edifice != null && reservation.Target == (LocalTargetInfo)(Thing)edifice)
+                                            reservation.Claimant.jobs.EndCurrentOrQueuedJob(reservation.Job, JobCondition.InterruptForced);
+                                        else if (reservation.Target == (LocalTargetInfo)interactionCell)
+                                            reservation.Claimant.jobs.EndCurrentOrQueuedJob(reservation.Job, JobCondition.InterruptForced);
+                                    }
+                                }
+                            }
                         }
                         if (thing != null && thing.def.EverHaulable)
                         {
@@ -959,8 +1005,9 @@ namespace RimThreaded.RW_Patches
             __result = LocalTargetInfo.Invalid;
             return false;
         }
-        public static bool IsReservedByAnyoneOf(ReservationManager __instance, ref bool __result, LocalTargetInfo target, Faction faction)
+        public static bool TryGetReserver(ReservationManager __instance, ref bool __result, LocalTargetInfo target, Faction faction, ref Pawn reserver)
         {
+            reserver = null;
             if (!target.IsValid)
             {
                 __result = false;
@@ -973,6 +1020,7 @@ namespace RimThreaded.RW_Patches
                 if (reservation.Claimant.Faction == faction)
                 {
                     __result = true;
+                    reserver = reservation.Claimant;
                     return false;
                 }
             }

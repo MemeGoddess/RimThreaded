@@ -11,9 +11,10 @@ namespace RimThreaded.RW_Patches
         {
             Type original = typeof(FloodFiller);
             Type patched = typeof(FloodFiller_Patch);
-            RimThreadedHarmony.Prefix(original, patched, "FloodFill", new[] { typeof(IntVec3), typeof(Predicate<IntVec3>), typeof(Func<IntVec3, int, bool>), typeof(int), typeof(bool), typeof(IEnumerable<IntVec3>) });
+            RimThreadedHarmony.Prefix(original, patched, nameof(FloodFiller.FloodFill), new[] { typeof(IntVec3), typeof(Predicate<IntVec3>), typeof(Func<IntVec3, int, bool>), typeof(int), typeof(bool), typeof(IEnumerable<IntVec3>) });
         }
 
+        // TODO LA Use MethodBase? This just seems to add a lock
         public static bool FloodFill(FloodFiller __instance,
               IntVec3 root,
               Predicate<IntVec3> passCheck,

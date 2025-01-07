@@ -13,7 +13,7 @@ namespace RimThreaded.RW_Patches
         {
             Type original = typeof(BiomeDef);
             Type patched = typeof(BiomeDef_Patch);
-            RimThreadedHarmony.Prefix(original, patched, "CachePlantCommonalitiesIfShould");
+            RimThreadedHarmony.Prefix(original, patched, nameof(BiomeDef.CachePlantCommonalitiesIfShould));
         }
         public static bool CachePlantCommonalitiesIfShould(BiomeDef __instance)
         {

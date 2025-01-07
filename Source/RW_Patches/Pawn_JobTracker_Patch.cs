@@ -108,23 +108,52 @@ namespace RimThreaded.RW_Patches
 
                 StoragePriority currentPriority = StoreUtility.CurrentStoragePriorityOf(thing);
                 IntVec3 foundCell = IntVec3.Invalid;
-                if (!StoreUtility.TryFindBestBetterStoreCellFor(thing, pawn, pawn.Map, currentPriority, pawn.Faction, out foundCell))
+                IHaulDestination haulDestination;
+                if (!StoreUtility.TryFindBestBetterStorageFor(thing, pawn, pawn.Map, currentPriority, pawn.Faction, out foundCell, out  haulDestination))
                 {
                     continue;
                 }
 
-                float num3 = foundCell.DistanceTo(cell);
-                if (!(num3 > 50f) && !(num3 > num * 0.6f) && !(num2 + thing.Position.DistanceTo(foundCell) + num3 > num * 1.7f) && !(num2 + num3 > num) && pawn.Position.WithinRegions(thing.Position, pawn.Map, 25, TraverseParms.For(pawn)) && foundCell.WithinRegions(cell, pawn.Map, 25, TraverseParms.For(pawn)))
+                IntVec3 newCell;
+                switch (haulDestination)
+                {
+                    case ISlotGroupParent _:
+                        newCell = foundCell;
+                        break;
+                    case Thing thing2:
+                        if (thing2.TryGetInnerInteractableThingOwner() != null)
+                        {
+                            newCell = thing2.Position;
+                            break;
+                        }
+                        goto default;
+                    default:
+                        Log.Error("Don't know how to handle opportunistic hauling for Storage: " + haulDestination.ToStringSafe<IHaulDestination>() + ", Thing: " + thing.ToStringSafe<Thing>());
+                        continue;
+                }
+
+                float num3 = newCell.DistanceTo(cell);
+                if (!(num3 > 50f) && !(num3 > num * 0.6f) && !(num2 + thing.Position.DistanceTo(newCell) + num3 > num * 1.7f) && !(num2 + num3 > num) && pawn.Position.WithinRegions(thing.Position, pawn.Map, 25, TraverseParms.For(pawn)) && newCell.WithinRegions(cell, pawn.Map, 25, TraverseParms.For(pawn)))
                 {
                     if (DebugViewSettings.drawOpportunisticJobs)
                     {
                         Log.Message("Opportunistic job spawned");
                         pawn.Map.debugDrawer.FlashLine(pawn.Position, thing.Position, 600, SimpleColor.Red);
-                        pawn.Map.debugDrawer.FlashLine(thing.Position, foundCell, 600, SimpleColor.Green);
-                        pawn.Map.debugDrawer.FlashLine(foundCell, cell, 600, SimpleColor.Blue);
+                        pawn.Map.debugDrawer.FlashLine(thing.Position, newCell, 600, SimpleColor.Green);
+                        pawn.Map.debugDrawer.FlashLine(newCell, cell, 600, SimpleColor.Blue);
                     }
 
-                    __result = HaulAIUtility.HaulToCellStorageJob(pawn, thing, foundCell, fitInStoreCell: false);
+                    switch(haulDestination)
+                    {
+                        case ISlotGroupParent _:
+                            __result = HaulAIUtility.HaulToCellStorageJob(pawn, thing, foundCell, fitInStoreCell: false);
+                            return false;
+                        case Thing container:
+                            __result = HaulAIUtility.HaulToContainerJob(pawn, thing, container);
+                            return false;
+                        default:
+                            continue;
+                    }
                     return false;
                 }
             }
@@ -133,7 +162,10 @@ namespace RimThreaded.RW_Patches
         }
 
         public static bool StartJob(Pawn_JobTracker __instance,
-          Job newJob, JobCondition lastJobEndCondition = JobCondition.None, ThinkNode jobGiver = null, bool resumeCurJobAfterwards = false, bool cancelBusyStances = true, ThinkTreeDef thinkTree = null, JobTag? tag = null, bool fromQueue = false, bool canReturnCurJobToPool = false, bool? keepCarryingThingOverride = null, bool continueSleeping = false, bool addToJobsThisTick = true)
+          Job newJob, JobCondition lastJobEndCondition = JobCondition.None, ThinkNode jobGiver = null,
+          bool resumeCurJobAfterwards = false, bool cancelBusyStances = true, ThinkTreeDef thinkTree = null,
+          JobTag? tag = null, bool fromQueue = false, bool canReturnCurJobToPool = false,
+          bool? keepCarryingThingOverride = null, bool continueSleeping = false, bool addToJobsThisTick = true, bool preToilReservationsCanFail = false)
         {
             __instance.startingNewJob = true;
             Job job = null;
@@ -206,13 +238,22 @@ namespace RimThreaded.RW_Patches
                     newJob.ignoreDesignations = true;
                 }
 
+                foreach (Hediff hediff in __instance.pawn.health.hediffSet.hediffs)
+                {
+                    string str;
+                    if (hediff.def.TryGetReportStringOverrideFor(newJob.def, out str))
+                    {
+                        newJob.reportStringOverride = str;
+                        break;
+                    }
+                }
+
                 __instance.curJob = newJob;
                 __instance.curJob.jobGiverThinkTree = thinkTree;
                 __instance.curJob.jobGiver = jobGiver;
                 JobDriver cDriver = __instance.curJob.MakeDriver(__instance.pawn); //changed
                 __instance.curDriver = cDriver; //changed
-                bool flag = fromQueue;
-                if (__instance.curDriver.TryMakePreToilReservations(!flag))
+                if (__instance.curDriver.TryMakePreToilReservations(!preToilReservationsCanFail && !fromQueue))
                 {
                     Job job2 = __instance.TryOpportunisticJob(job, newJob);
                     if (job2 != null)
@@ -247,13 +288,13 @@ namespace RimThreaded.RW_Patches
                     cDriver.SetupToils(); //changed
                     cDriver.ReadyForNextToil(); //changed
                 }
-                else if (flag)
+                else if (preToilReservationsCanFail | fromQueue)
                 {
                     __instance.EndCurrentJob(JobCondition.QueuedNoLongerValid);
                 }
                 else
                 {
-                    Log.Warning("TryMakePreToilReservations() returned false for a non-queued job right after StartJob(). This should have been checked before. curJob=" + __instance.curJob.ToStringSafe());
+                    Log.Warning($"TryMakePreToilReservations() returned false for a non-queued job right after StartJob(). This should have been checked before. pawn = {(object)__instance.pawn}, curJob = {(object)__instance.curJob.ToStringSafe<Job>()}");
                     __instance.EndCurrentJob(JobCondition.Errored);
                 }
             }
@@ -265,8 +306,14 @@ namespace RimThreaded.RW_Patches
         }
 
 
-        public static bool DetermineNextJob(Pawn_JobTracker __instance, ref ThinkResult __result, out ThinkTreeDef thinkTree)
+        public static bool DetermineNextJob(Pawn_JobTracker __instance, ref ThinkResult __result, out ThinkTreeDef thinkTree, bool ignoreQueue = false)
         {
+            if (__instance.determiningNextJob)
+            {
+                thinkTree = null;
+                __result = ThinkResult.NoJob;
+                return false;
+            }
             ThinkResult constantThinkTreeJob = __instance.DetermineNextConstantThinkTreeJob();
             if (constantThinkTreeJob.Job != null)
             {
@@ -277,13 +324,17 @@ namespace RimThreaded.RW_Patches
             ThinkResult thinkResult = ThinkResult.NoJob;
             try
             {
-                thinkResult = __instance.pawn.thinker.MainThinkNodeRoot.TryIssueJobPackage(__instance.pawn, new JobIssueParams());
+                thinkResult = __instance.pawn.thinker.MainThinkNodeRoot.TryIssueJobPackage(__instance.pawn, new JobIssueParams()
+                {
+                    ignoreQueue = ignoreQueue
+                });
             }
             catch (Exception ex)
             {
                 JobUtility.TryStartErrorRecoverJob(__instance.pawn, __instance.pawn.ToStringSafe() + " threw exception while determining job (main)", ex);
                 thinkTree = null;
                 __result = ThinkResult.NoJob;
+                __instance.determiningNextJob = false;
                 return false;
             }
             finally
@@ -292,6 +343,7 @@ namespace RimThreaded.RW_Patches
             thinkTree = __instance?.pawn?.thinker?.MainThinkTree; //changed
             if (thinkTree == null) //changed
                 thinkResult = ThinkResult.NoJob; //changed
+            __instance.determiningNextJob = false;
             __result = thinkResult;
             return false;
         }

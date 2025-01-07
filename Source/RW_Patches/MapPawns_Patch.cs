@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using RimWorld;
 using Verse;
 using static Verse.MapPawns;
@@ -87,7 +88,7 @@ namespace RimThreaded.RW_Patches
             for (int i = 0; i < allPawns.Count; i++)
             {
                 Pawn pawn = allPawns[i];
-                if (pawn.Faction == faction && pawn.HostFaction == null && pawn.RaceProps.Humanlike)
+                if ((!ModsConfig.AnomalyActive || !pawn.IsMutant) && pawn.Faction == faction && pawn.HostFaction == null && pawn.RaceProps.Humanlike)
                 {
                     value.Add(pawn);
                 }
@@ -114,7 +115,7 @@ namespace RimThreaded.RW_Patches
             for (int i = 0; i < pawnList.Count; i++)
             {
                 Pawn pawn = pawnList[i];
-                if (pawn.HostFaction == null && pawn.RaceProps.Humanlike)
+                if ((!ModsConfig.AnomalyActive || !pawn.IsMutant) && pawn.HostFaction == null && pawn.RaceProps.Humanlike)
                 {
                     value.Add(pawn);
                 }
