@@ -48,14 +48,18 @@ namespace RimThreaded.RW_Patches
             }
             for (int index = 0; index < thingList.Count; ++index)
             {
-                if (thingList[index] is Pawn pawn1 && pawn1 != forPawn && !pawn1.Downed && (!collideOnlyWithStandingPawns || !pawn1.pather.MovingNow && (!pawn1.pather.Moving || !pawn1.pather.MovedRecently(60))) && !PawnUtility.PawnsCanShareCellBecauseOfBodySize(pawn1, forPawn))
+                if (thingList[index] is Pawn pawn1 && pawn1 != forPawn && !pawn1.Downed &&
+                    (!collideOnlyWithStandingPawns || !pawn1.pather.MovingNow &&
+                        (!pawn1.pather.Moving || !pawn1.pather.MovedRecently(60))) &&
+                    !PawnUtility.PawnsCanShareCellBecauseOfBodySize(pawn1, forPawn)
+                    && !pawn1.IsPsychologicallyInvisible() && pawn1.kindDef.collidesWithPawns)
                 {
                     if (pawn1.HostileTo(forPawn))
                     {
                         __result = pawn1;
                         return false;
                     }
-                    if (flag && (forPathFinder || !forPawn.Drafted || !pawn1.RaceProps.Animal))
+                    if ((!forPawn.IsShambler || MutantUtility.ShamblerShouldCollideWith(forPawn, pawn1)) && flag && (forPathFinder || !forPawn.Drafted || !pawn1.RaceProps.Animal))
                     {
                         Job curJob = pawn1.CurJob;
                         if (curJob != null)

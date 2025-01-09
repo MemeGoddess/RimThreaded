@@ -879,6 +879,11 @@ namespace RimThreaded
 
             Postfix(typeof(SlotGroup), typeof(HaulingCache), nameof(HaulingCache.Notify_AddedCell)); //recheck growing zone when upon stockpile zone grid add
 			Postfix(typeof(ListerHaulables), typeof(HaulingCache), nameof(HaulingCache.Notify_SlotGroupChanged)); //recheck growing zone when upon other actions
+
+			PawnsFinder_Patch.RunNonDestructivePatches();
+            Plant_Patch.RunNonDestructivePatches();
+
+
         }
 
         private static void PatchDestructiveFixes()
@@ -985,7 +990,6 @@ namespace RimThreaded
 			PawnPathPool_Patch.RunDestructivePatches(); //removed leak check based on map size, since pool is now a threadstatic
 			PawnTextureAtlas_Patch.RunDestructivePatches();
 			PawnUtility_Patch.RunDestructivePatches();
-			Plant_Patch.RunNonDestructivePatches();
 			PlayLog_Patch.RunDestructivePatches();
 			PhysicalInteractionReservationManager_Patch.RunDestructivePatches(); //TODO: write ExposeData and change concurrent dictionary
 			Rand_Patch.RunDestructivePatches(); //Simple

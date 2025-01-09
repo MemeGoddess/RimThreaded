@@ -14,10 +14,18 @@ namespace RimThreaded.RW_Patches
 
         public static bool UpdateRotation(Pawn_RotationTracker __instance)
         {
-            if (__instance.pawn.Destroyed || __instance.pawn.jobs.HandlingFacing)
+            if (__instance.pawn.Destroyed)
+                return false;
+
+            if (__instance.pawn.kindDef.useFixedRotation)
             {
+                __instance.pawn.Rotation = __instance.pawn.kindDef.fixedRotation;
                 return false;
             }
+
+            if (__instance.pawn.jobs.HandlingFacing || __instance.pawn.stances.stunner.Stunned && __instance.pawn.stances.stunner.DisableRotation)
+                return false;
+
             Stance_Busy stance_Busy = __instance.pawn.stances.curStance as Stance_Busy;
             if (stance_Busy != null && stance_Busy.focusTarg.IsValid)
             {

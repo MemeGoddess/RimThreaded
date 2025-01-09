@@ -46,6 +46,9 @@ namespace RimThreaded.RW_Patches
                         __instance.pawn.needs.mood.thoughts.memories.TryGainMemoryFast(curWeatherLerped.weatherThought);
                 }
             }
+
+            if (__instance.pawn.Position.GasDensity(__instance.pawn.Map, GasType.RotStink) > (byte)0)
+                __instance.lastRotStinkTick = Find.TickManager.TicksGame;
             if (__instance.droppedWeapon != null && !__instance.droppedWeapon.Spawned)
                 __instance.droppedWeapon = (Thing)null;
             if (GenLocalDate.DayTick((Thing)__instance.pawn) == 0)

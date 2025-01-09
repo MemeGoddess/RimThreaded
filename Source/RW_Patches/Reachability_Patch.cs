@@ -107,7 +107,7 @@ namespace RimThreaded.RW_Patches
                 }
             }
 
-            if (traverseParams.mode == TraverseMode.PassAllDestroyableThings)
+            if (traverseParams.mode == TraverseMode.PassAllDestroyableThings || traverseParams.mode == TraverseMode.PassAllDestroyablePlayerOwnedThings)
             {
                 TraverseParms traverseParams2 = traverseParams;
                 traverseParams2.mode = TraverseMode.PassDoors;

@@ -36,6 +36,7 @@ namespace RimThreaded.RW_Patches
             }
             return boolArray;
         }
+        // TODO LA Transpile this?
         public static bool LeanShootingSourcesFromTo(IntVec3 shooterLoc, IntVec3 targetPos, Map map, List<IntVec3> listToFill)
         {
             lock (listToFill)
@@ -78,6 +79,14 @@ namespace RimThreaded.RW_Patches
                 lock (listToFill)
                 {
                     listToFill.Add(shooterLoc + new IntVec3(0, 0, 1));
+                }
+            }
+
+            if (shooterLoc.CanBeSeenOver(map))
+            {
+                lock (listToFill)
+                {
+                    listToFill.Add(shooterLoc);
                 }
             }
             for (int j = 0; j < 4; j++)

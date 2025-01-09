@@ -7,6 +7,7 @@ using System.Threading;
 using HarmonyLib;
 using UnityEngine;
 using Verse;
+using Verse.AI;
 using static HarmonyLib.AccessTools;
 
 namespace RimThreaded.RW_Patches
@@ -97,6 +98,10 @@ namespace RimThreaded.RW_Patches
             //__instance.Notify_HediffChanged(null); 1.4 changed?
             __instance.Notify_HediffChanged(hediff);
 
+            if(hediff.def.HasDefinedGraphicProperties || hediff.def.forceRenderTreeRecache)
+                __instance.pawn.Drawer.renderer.SetAllGraphicsDirty();
+            Pawn_HealthTracker.tmpRemovedHediffs.Add(hediff);
+
             return false;
         }
         public static bool RestorePartRecursiveInt(Pawn_HealthTracker __instance, BodyPartRecord part, Hediff diffException = null)
@@ -141,11 +146,31 @@ namespace RimThreaded.RW_Patches
             }
             return false;
         }
-        public static bool Notify_Resurrected(Pawn_HealthTracker __instance)
+        public static bool Notify_Resurrected(Pawn_HealthTracker __instance, bool restoreMissingParts = true, float gettingScarsChance = 0.0f)
         {
             lock (__instance.hediffSet) //added
             {
-                List<Hediff> newHediffs = new List<Hediff>(__instance.hediffSet.hediffs); //added
+
+                var hediffSet = __instance.hediffSet; //added
+                List<Hediff> newHediffs = new List<Hediff>(hediffSet.hediffs); //added
+
+                if ((double)gettingScarsChance > 0.0)
+                {
+                    for (int index = 0; index < newHediffs.Count; ++index)
+                    {
+                        if (newHediffs[index] is Hediff_Injury hediff &&
+                            !hediffSet.PartOrAnyAncestorHasDirectlyAddedParts(hediff.Part))
+                        {
+                            HediffComp_GetsPermanent comp = hediff.TryGetComp<HediffComp_GetsPermanent>();
+                            if (comp != null && !comp.IsPermanent && Rand.Chance(gettingScarsChance))
+                            {
+                                comp.IsPermanent = true;
+                                hediff.Severity = Mathf.Min(hediff.Severity, (float)Rand.RangeInclusive(2, 6));
+                            }
+                        }
+                    }
+                }
+
                 __instance.healthState = PawnHealthState.Mobile;
                 newHediffs.RemoveAll(x => x.def.everCurableByItem && x.TryGetComp<HediffComp_Immunizable>() != null);
                 newHediffs.RemoveAll(x => x.def.everCurableByItem && x is Hediff_Injury && !x.IsPermanent());
@@ -153,20 +178,43 @@ namespace RimThreaded.RW_Patches
                 {
                     if (!x.def.everCurableByItem)
                         return false;
-                    if (x.def.lethalSeverity >= 0.0)
-                        return true;
-                    return x.def.stages != null && x.def.stages.Any(y => y.lifeThreatening);
+                    return x.IsLethal || x.IsAnyStageLifeThreatening();
+
                 });
-                newHediffs.RemoveAll(x => x.def.everCurableByItem && x is Hediff_Injury && x.IsPermanent() && (double)__instance.hediffSet.GetPartHealth(x.Part) <= 0.0);
-                __instance.hediffSet.hediffs = newHediffs; //added
-                while (true)
+                if (!__instance.pawn.RaceProps.IsMechanoid)
                 {
-                    Hediff_MissingPart hediffMissingPart = __instance.hediffSet.GetMissingPartsCommonAncestors().Where(x => !__instance.hediffSet.PartOrAnyAncestorHasDirectlyAddedParts(x.Part)).FirstOrDefault();
-                    if (hediffMissingPart != null)
-                        __instance.RestorePart(hediffMissingPart.Part, checkStateChange: false);
-                    else
-                        break;
+                    newHediffs.RemoveAll((Predicate<Hediff>)(x => x.def.everCurableByItem && x is Hediff_Injury && !x.IsPermanent()));
                 }
+                else
+                {
+                    // TODO LA tmpMechInjuries might need a newHediffs treatment
+                    __instance.tmpMechInjuries.Clear();
+                    hediffSet.GetHediffs<Hediff_Injury>(ref __instance.tmpMechInjuries, (Predicate<Hediff_Injury>)(x => x != null && x.def.everCurableByItem && !x.IsPermanent()));
+                    if (__instance.tmpMechInjuries.Count > 0)
+                    {
+                        float num = __instance.tmpMechInjuries.Sum<Hediff_Injury>((Func<Hediff_Injury, float>)(x => x.Severity)) * 0.5f / (float)__instance.tmpMechInjuries.Count;
+                        for (int index = 0; index < __instance.tmpMechInjuries.Count; ++index)
+                            __instance.tmpMechInjuries[index].Severity -= num;
+                        __instance.tmpMechInjuries.Clear();
+                    }
+                }
+                newHediffs.RemoveAll(x => x.def.everCurableByItem && x is Hediff_Injury && x.IsPermanent() && (double)__instance.hediffSet.GetPartHealth(x.Part) <= 0.0);
+                __instance.hediffSet = hediffSet; //added
+                __instance.hediffSet.hediffs = newHediffs; //added
+                if (restoreMissingParts)
+                {
+                    while (true)
+                    {
+                        Hediff_MissingPart hediffMissingPart = __instance.hediffSet.GetMissingPartsCommonAncestors()
+                            .Where(x => !__instance.hediffSet.PartOrAnyAncestorHasDirectlyAddedParts(x.Part))
+                            .FirstOrDefault();
+                        if (hediffMissingPart != null)
+                            __instance.RestorePart(hediffMissingPart.Part, checkStateChange: false);
+                        else
+                            break;
+                    }
+                }
+
                 __instance.hediffSet.DirtyCache();
                 if (__instance.ShouldBeDead())
                     __instance.hediffSet.hediffs.RemoveAll(h => !h.def.keepOnBodyPartRestoration);
@@ -180,9 +228,12 @@ namespace RimThreaded.RW_Patches
             Pawn pawn = __instance.pawn; //added
             if (__instance.Dead)
                 return false;
-            for (int index = __instance.hediffSet.hediffs.Count - 1; index >= 0; --index)
+
+            // I'm not using Pawn_HealthTracker.tmpHediffs. That's just asking for multithreading issues...
+            var tmpHediffs = __instance.hediffSet.hediffs;
+            foreach(var hediff in tmpHediffs)
             {
-                Hediff hediff = __instance.hediffSet.hediffs[index];
+                // Omitting a check for tmpRemovedHediffs here. It's an empty list that is cleared and then checked if contains the hediff...
                 try
                 {
                     hediff.Tick();
@@ -203,7 +254,6 @@ namespace RimThreaded.RW_Patches
                 if (__instance.Dead)
                     return false;
             }
-            bool flag1 = false;
             lock (__instance.hediffSet) //added
             {
                 List<Hediff> newHediffs = new List<Hediff>(__instance.hediffSet.hediffs); //added
@@ -212,22 +262,18 @@ namespace RimThreaded.RW_Patches
                     Hediff hediff = newHediffs[index];
                     if (hediff.ShouldRemove)
                     {
-                        hediff.PreRemoved();
-                        newHediffs.RemoveAt(index); //changed
-                        __instance.hediffSet.hediffs = newHediffs; //added
-                        hediff.PostRemoved();
-                        flag1 = true;
+                        __instance.RemoveHediff(hediff);
                     }
                 }
             }
-            if (flag1)
-                __instance.Notify_HediffChanged(null);
             if (__instance.Dead)
                 return false;
             __instance.immunity.ImmunityHandlerTick();
-            if (pawn.RaceProps.IsFlesh && pawn.IsHashIntervalTick(600) && (pawn.needs.food == null || !pawn.needs.food.Starving))
+            if(pawn.Spawned && pawn.Crawling && pawn.MapHeld.reservationManager.IsReservedAndRespected((LocalTargetInfo) (Thing) pawn, pawn))
+                __instance.pawn.jobs.EndCurrentJob(JobCondition.InterruptForced);
+            if ((pawn.RaceProps.IsFlesh|| pawn.RaceProps.IsAnomalyEntity) && pawn.IsHashIntervalTick(600) && (pawn.needs.food == null || !pawn.needs.food.Starving))
             {
-                bool flag2 = false;
+                bool flag = false;
                 if (__instance.hediffSet.HasNaturallyHealingInjury())
                 {
                     float num = 8f;
@@ -249,7 +295,7 @@ namespace RimThreaded.RW_Patches
                     __instance.hediffSet.GetHediffs(ref __instance.tmpHediffInjuries, (Hediff_Injury h) => h.CanHealNaturally());
                     __instance.tmpHediffInjuries.RandomElement().Heal(num * pawn.HealthScale * 0.01f * pawn.GetStatValue(StatDefOf.InjuryHealingFactor));
 
-                    flag2 = true;
+                    flag = true;
                 }
                 if (__instance.hediffSet.HasTendedAndHealingInjury() && (pawn.needs.food == null || !pawn.needs.food.Starving))
                 {
@@ -265,19 +311,24 @@ namespace RimThreaded.RW_Patches
                         float tendQuality = hediff_Injury.TryGetComp<HediffComp_TendDuration>().tendQuality;
                         float num4 = GenMath.LerpDouble(0f, 1f, 0.5f, 1.5f, Mathf.Clamp01(tendQuality));
                         hediff_Injury.Heal(8f * num4 * pawn.HealthScale * 0.01f * pawn.GetStatValue(StatDefOf.InjuryHealingFactor));
-                        flag2 = true;
+                        flag = true;
                     }
                 }
-                if (flag2 && !__instance.HasHediffsNeedingTendByPlayer() && !HealthAIUtility.ShouldSeekMedicalRest(pawn) && !__instance.hediffSet.HasTendedAndHealingInjury() && PawnUtility.ShouldSendNotificationAbout(pawn))
+                if (flag && !__instance.HasHediffsNeedingTendByPlayer() && !HealthAIUtility.ShouldSeekMedicalRest(pawn) && !__instance.hediffSet.HasTendedAndHealingInjury() && PawnUtility.ShouldSendNotificationAbout(pawn))
                     Messages.Message((string)"MessageFullyHealed".Translate((NamedArgument)pawn.LabelCap, (NamedArgument)pawn), (LookTargets)pawn, MessageTypeDefOf.PositiveEvent);
             }
-            if (pawn.RaceProps.IsFlesh && __instance.hediffSet.BleedRateTotal >= 0.1f)
+            if (__instance.CanBleed && __instance.hediffSet.BleedRateTotal >= 0.1f && (pawn.Spawned || pawn.ParentHolder is Pawn_CarryTracker) && pawn.SpawnedOrAnyParentSpawned)
             {
-                float num5 = __instance.hediffSet.BleedRateTotal * pawn.BodySize;
-                num5 = ((pawn.GetPosture() != 0) ? (num5 * 0.0004f) : (num5 * 0.004f));
-                if (Rand.Value < num5)
+                if (pawn.Crawling && pawn.Spawned)
                 {
-                    __instance.DropBloodFilth();
+                    if (!__instance.lastSmearDropPos.HasValue || (double)Vector3.Distance(pawn.DrawPos, __instance.lastSmearDropPos.Value) > (double)Pawn_HealthTracker.BloodFilthDropDistanceRangeFromBleedRate.LerpThroughRange(__instance.hediffSet.BleedRateTotal))
+                        __instance.DropBloodSmear();
+                }
+                else
+                {
+                    float bleedRate = __instance.hediffSet.BleedRateTotal * pawn.BodySize;
+                    if (Rand.Chance(pawn.GetPosture() != PawnPosture.Standing ? bleedRate * 0.0004f : bleedRate * 0.004f))
+                        __instance.DropBloodFilth();
                 }
             }
             if (!pawn.IsHashIntervalTick(60))

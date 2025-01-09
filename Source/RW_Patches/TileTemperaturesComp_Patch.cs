@@ -116,6 +116,11 @@ namespace RimThreaded.RW_Patches
 
         public static bool OutdoorTemperatureAcceptableFor(TileTemperaturesComp __instance, ref bool __result, int tile, ThingDef animalRace)
         {
+            if (tile < 0)
+            {
+                __result = true;
+                return false;
+            }
             float outdoorTemp = __instance.GetOutdoorTemp(tile);
             if (outdoorTemp > animalRace.GetStatValueAbstract(StatDefOf.ComfyTemperatureMin))
             {
@@ -128,6 +133,11 @@ namespace RimThreaded.RW_Patches
 
         public static bool SeasonAndOutdoorTemperatureAcceptableFor(TileTemperaturesComp __instance, ref bool __result, int tile, ThingDef animalRace)
         {
+            if (tile < 0)
+            {
+                __result = true;
+                return false;
+            }
             if (__instance.SeasonAcceptableFor(tile, animalRace))
             {
                 __result = __instance.OutdoorTemperatureAcceptableFor(tile, animalRace);

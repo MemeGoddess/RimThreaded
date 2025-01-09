@@ -22,8 +22,7 @@ namespace RimThreaded.RW_Patches
             Type patched = typeof(RegionDirtyer_Patch);
             RimThreadedHarmony.Prefix(original, patched, nameof(SetAllClean));
             RimThreadedHarmony.Prefix(original, patched, nameof(Notify_WalkabilityChanged));
-            RimThreadedHarmony.Prefix(original, patched, nameof(Notify_ThingAffectingRegionsSpawned));
-            RimThreadedHarmony.Prefix(original, patched, nameof(Notify_ThingAffectingRegionsDespawned));
+            RimThreadedHarmony.Prefix(original, patched, nameof(DirtyRegionForThing));
             RimThreadedHarmony.Prefix(original, patched, nameof(SetAllDirty));
             RimThreadedHarmony.Prefix(original, patched, nameof(SetRegionDirty));
         }
@@ -101,7 +100,7 @@ namespace RimThreaded.RW_Patches
             return false;
         }
 
-        public static bool Notify_ThingAffectingRegionsSpawned(RegionDirtyer __instance, Thing b)
+        public static bool DirtyRegionForThing(RegionDirtyer __instance, Thing b)
         {
             regionsToDirty.Clear();
             foreach (IntVec3 item in b.OccupiedRect().ExpandedBy(1).ClipInsideMap(b.Map))
@@ -121,53 +120,6 @@ namespace RimThreaded.RW_Patches
             return false;
         }
 
-
-        public static bool Notify_ThingAffectingRegionsDespawned(RegionDirtyer __instance, Thing b)
-        {
-            regionsToDirty.Clear();
-            Region validRegionAt_NoRebuild = __instance.map.regionGrid.GetValidRegionAt_NoRebuild(b.Position);
-            if (validRegionAt_NoRebuild != null)
-            {
-                __instance.map.temperatureCache.TryCacheRegionTempInfo(b.Position, validRegionAt_NoRebuild);
-                regionsToDirty.Add(validRegionAt_NoRebuild);
-            }
-
-            foreach (IntVec3 item2 in GenAdj.CellsAdjacent8Way(b))
-            {
-                if (item2.InBounds(__instance.map))
-                {
-                    Region validRegionAt_NoRebuild2 = __instance.map.regionGrid.GetValidRegionAt_NoRebuild(item2);
-                    if (validRegionAt_NoRebuild2 != null)
-                    {
-                        __instance.map.temperatureCache.TryCacheRegionTempInfo(item2, validRegionAt_NoRebuild2);
-                        regionsToDirty.Add(validRegionAt_NoRebuild2);
-                    }
-                }
-            }
-
-            for (int i = 0; i < regionsToDirty.Count; i++)
-            {
-                SetRegionDirty(__instance, regionsToDirty[i]);
-            }
-
-            ConcurrentQueue<IntVec3> dirtyCells = get_DirtyCells(__instance);
-            if (b.def.size.x == 1 && b.def.size.z == 1)
-            {
-                dirtyCells.Enqueue(b.Position);
-                return false;
-            }
-
-            CellRect cellRect = b.OccupiedRect();
-            for (int j = cellRect.minZ; j <= cellRect.maxZ; j++)
-            {
-                for (int k = cellRect.minX; k <= cellRect.maxX; k++)
-                {
-                    IntVec3 item = new IntVec3(k, 0, j);
-                    dirtyCells.Enqueue(item);
-                }
-            }
-            return false;
-        }
 
         public static bool SetAllDirty(RegionDirtyer __instance)
         {
