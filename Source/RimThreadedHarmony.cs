@@ -525,6 +525,7 @@ namespace RimThreaded
 			return finalCodeInstructions;
 		}
 
+		// TODO LA Set this method up to take an option arg for a locking object? Rather than it always defining a local object. Could replace a lot of destructive patches
 		public static IEnumerable<CodeInstruction> WrapMethodInInstanceLock(IEnumerable<CodeInstruction> instructions, ILGenerator iLGenerator)
 		{
 			List<CodeInstruction> instructionsList = instructions.ToList();

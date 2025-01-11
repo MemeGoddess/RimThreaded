@@ -7,6 +7,7 @@ using System.Reflection.Emit;
 using System.Text;
 using System.Threading.Tasks;
 using HarmonyLib;
+using Mono.Cecil.Cil;
 using RimWorld;
 using Verse;
 
@@ -26,28 +27,27 @@ namespace RimThreaded.RW_Patches
             get_AllMapsCaravansAndTravelingTransportPods_Alive_FreeColonists_NoCryptosleep(
                 IEnumerable<CodeInstruction> instructions, ILGenerator ilGenerator)
         {
-
-            var wrappedInstructions = RimThreadedHarmony.WrapMethodInInstanceLock(instructions, ilGenerator);
-
+            var instructionsList = instructions.ToList();
             // Want to add a .ToList() call to the return 
-            var pawnListField = AccessTools.Field(
-                typeof(RimWorld.PawnsFinder),
-                nameof(PawnsFinder.allMapsCaravansAndTravelingTransportPods_Alive_FreeColonists_NoCryptosleep_Result)
-            );
+            var toListMethod = typeof(Enumerable)
+                    .GetMethods(BindingFlags.Static | BindingFlags.Public)
+                    .FirstOrDefault(m =>
+                        m.Name == "ToList"
+                        && m.IsGenericMethod
+                        && m.GetParameters().Length == 1
+                        && m.GetParameters()[0].ParameterType.GetGenericTypeDefinition() == typeof(IEnumerable<>)
+                    )?
+                    .MakeGenericMethod(typeof(Pawn));
 
-            var toListMethod = AccessTools.Method(
-                typeof(Enumerable),
-                nameof(Enumerable.ToList),
-                new[] { typeof(IEnumerable<Pawn>) }
-            );
-
-            foreach (var instruction in wrappedInstructions)
+            for (int i = instructionsList.Count() - 1; i > 0; i--)
             {
-                yield return instruction;
-
-                if (instruction.opcode == OpCodes.Ldsfld && instruction.operand == pawnListField)
-                    yield return new CodeInstruction(OpCodes.Call, toListMethod);
+                var instruction = instructionsList[i];
+                if (instruction.opcode == OpCodes.Ldsfld && (instruction.operand as FieldInfo).Name == nameof(PawnsFinder.allMapsCaravansAndTravelingTransportPods_Alive_FreeColonists_NoCryptosleep_Result))
+                    instructionsList.Insert(i + 1, new CodeInstruction(OpCodes.Call, toListMethod));
             }
+            // Why is this call not working and just returning null? O.o
+            var wrapped =  RimThreadedHarmony.WrapMethodInInstanceLock(instructionsList, ilGenerator);
+            return wrapped;
         }
     }
 }
