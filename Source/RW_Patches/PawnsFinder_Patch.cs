@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
 using System.Text;
 using System.Threading.Tasks;
+using HarmonyLib;
 using RimWorld;
 using Verse;
 
@@ -12,36 +14,40 @@ namespace RimThreaded.RW_Patches
 {
     public class PawnsFinder_Patch
     {
-        private static readonly object _lockObject = new object();
         internal static void RunNonDestructivePatches()
         {
             Type original = typeof(PawnsFinder);
             Type patched = typeof(PawnsFinder_Patch);
-            RimThreadedHarmony.Prefix(original, patched, "get_" + nameof(PawnsFinder.AllMapsCaravansAndTravelingTransportPods_Alive_FreeColonists_NoCryptosleep));
+            RimThreadedHarmony.Transpile(original, patched, nameof(get_AllMapsCaravansAndTravelingTransportPods_Alive_FreeColonists_NoCryptosleep));
         }
 
-        // TODO LA Make this non destructive again.
-        public static bool get_AllMapsCaravansAndTravelingTransportPods_Alive_FreeColonists_NoCryptosleep(MethodBase __originalMethod, ref List<Pawn> __result)
+
+        public static IEnumerable<CodeInstruction>
+            get_AllMapsCaravansAndTravelingTransportPods_Alive_FreeColonists_NoCryptosleep(
+                IEnumerable<CodeInstruction> instructions, ILGenerator ilGenerator)
         {
-            lock (_lockObject)
+
+            var wrappedInstructions = RimThreadedHarmony.WrapMethodInInstanceLock(instructions, ilGenerator);
+
+            // Want to add a .ToList() call to the return 
+            var pawnListField = AccessTools.Field(
+                typeof(RimWorld.PawnsFinder),
+                nameof(PawnsFinder.allMapsCaravansAndTravelingTransportPods_Alive_FreeColonists_NoCryptosleep_Result)
+            );
+
+            var toListMethod = AccessTools.Method(
+                typeof(Enumerable),
+                nameof(Enumerable.ToList),
+                new[] { typeof(IEnumerable<Pawn>) }
+            );
+
+            foreach (var instruction in wrappedInstructions)
             {
-                try
-                {
-                    PawnsFinder.allMapsCaravansAndTravelingTransportPods_Alive_FreeColonists_NoCryptosleep_Result.Clear();
-                    List<Pawn> transportPodsAlive = PawnsFinder.AllMapsCaravansAndTravelingTransportPods_Alive;
-                    for (int index = 0; index < transportPodsAlive.Count; ++index)
-                    {
-                        if (transportPodsAlive[index].IsFreeColonist && !transportPodsAlive[index].InCryptosleep)
-                            PawnsFinder.allMapsCaravansAndTravelingTransportPods_Alive_FreeColonists_NoCryptosleep_Result.Add(transportPodsAlive[index]);
-                    }
-                    __result = PawnsFinder.allMapsCaravansAndTravelingTransportPods_Alive_FreeColonists_NoCryptosleep_Result;
-                }
-                catch(Exception e)
-                {
-                    Debugger.Break();
-                }
+                yield return instruction;
+
+                if (instruction.opcode == OpCodes.Ldsfld && instruction.operand == pawnListField)
+                    yield return new CodeInstruction(OpCodes.Call, toListMethod);
             }
-            return false;
         }
     }
 }
